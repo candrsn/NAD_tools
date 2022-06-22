@@ -1,0 +1,22 @@
+NAD data locations
+
+
+s3://nationaladdressdata/
+
+
+https://www.transportation.gov/gis/national-address-database/national-address-database-0
+https://www.fgdc.gov/topics/national-address-database
+https://www.fgdc.gov/topics/national-address-database/nad-pilot-project
+
+https://www.fgdc.gov/ngac/meetings/december-2014/ngac-national-address-database-use-case-paper-december-2014.pdf
+
+https://communities.geoplatform.gov/ngda-address/
+
+https://www.naco.org/sites/default/files/event_attachments/National%20Address%20Database%20Pilot%20Project.pdf
+
+https://www.transportation.gov/tags/nad
+
+https://www.fgdc.gov/topics/national-address-database
+
+https://www.fgdc.gov/organization/steering-committee/meeting-minutes/april-2016/nad-pilot-draft-minimum-content-standard-sc.pdf/view
+

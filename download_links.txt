@@ -1,0 +1,5 @@
+
+# R10
+https://nationaladdressdata.s3.amazonaws.com/NAD_r10.zip
+https://nationaladdressdata.s3.amazonaws.com/NAD_r10_TXT.zip
+https://nationaladdressdata.s3.amazonaws.com/NAD_template_200408.zip
