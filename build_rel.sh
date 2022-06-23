@@ -10,7 +10,8 @@ extract_rel() {
         if [ -r "$itm" ]; then
             echo "unpack $itm"
             #unzip -j -p $itm NAD_r${v}.txt >> csv &
-            unzip -j -p $itm NAD_*.txt >> csv &
+            #unzip -j -p $itm NAD_*.txt >> csv &
+            unzip -j -p $itm TXT/NAD_*.txt >> csv &
         fi
     done
 }
