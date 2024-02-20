@@ -7,6 +7,7 @@ import os
 import pyarrow
 import pyarrow.parquet
 import sqlite3
+import glob
 import logging
 
 logger = logging.getLogger(__name__)
@@ -59,7 +60,7 @@ class Parquet_NAD_Writer():
     file_rowsets = 150
     rowset_itr = 0
 
-    def __init__(self, pathpattern, chunksize=None, compression="SNAPPY"):
+    def __init__(self, pathpattern, chunksize=None, compression="ZSTD"):
         self.pattern = pathpattern
         self.active_file = self.compute_next_filename()
         self.chunksize = chunksize
@@ -90,7 +91,8 @@ class Parquet_NAD_Writer():
 
         fx = pyarrow.Table.from_pandas(df, schema=self.schema, safe=False)
         if self.writer is None:
-            self.writer = pyarrow.parquet.ParquetWriter(self.active_file, fx.schema, compression=self.compression)
+            self.writer = pyarrow.parquet.ParquetWriter(self.active_file, fx.schema, 
+                            compression=self.compression, compression_level=19)
         self.writer.write_table(fx)
 
         if self.rowset_itr > self.file_rowsets:
@@ -100,7 +102,17 @@ class Parquet_NAD_Writer():
             self.rowset_itr += 1
 
     def compute_set_metadata(self):
-        pass
+        if "_metadata" in glob.glob(self.pattern + "/*"):
+            fileset = pyarrow.parquet.ParquetDataset(self.pattern)
+        else:
+            fg = glob.glob(self.pattern)
+            fileset = pyarrow.parquet.ParquetDataset(fg)
+
+            schema = fileset.schema
+
+            mc = []
+            pyarrow.parquet.write_metadata(schema, self.pattern + "/_metadata", metadata_collector=mc)
+
 
     def commit(self):
         pass
@@ -110,4 +122,42 @@ class Parquet_NAD_Writer():
             self.writer.close()
         self.compute_set_metadata()
 
+
+
+
+def parquet_stats(path):
+
+    fg = glob.glob(path + "/*.parquet")
+
+    if os.path.exists(path + "/_metadata"):
+        fileset = pyarrow.parquet.ParquetDataset(path)
+    else:
+        fileset = pyarrow.parquet.ParquetDataset(fg)
+
+        schema = fileset.schema
+
+        mc = []
+        pyarrow.parquet.write_metadata(schema, path + "/_metadata", metadata_collector=mc)
+
+    for pqfile in fileset.files:
+        meta = pyarrow.parquet.read_metadata(pqfile)
+        print(f"pqfile \n")
+        print(meta)
+        csz = 0
+        ucsz = 0
+        for rg in range(0, meta.num_row_groups):
+            for cg in range(meta.num_columns):
+                colmeta = meta.row_group(rg).column(cg)
+                ucsz += colmeta.total_uncompressed_size
+                csz += colmeta.total_compressed_size
+
+        print(f"file compression ratio {float(ucsz / csz):-5.5g} \n\n")
+        #print(meta.row_group(0).column(2))
+        #print(meta.row_group(3).column(9))
+
+
+
+if __name__ == "__main__":
+
+    parquet_stats("tmp/nad_r15")
 

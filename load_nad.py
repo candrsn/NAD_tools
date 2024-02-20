@@ -154,7 +154,7 @@ def load_db(dbc, rel, fifoname, chksz):
 
     stime = time.time()
 
-    archive_file = f"{rel}/NAD_{rel}_TXT.zip"
+    archive_file = f"rawdata/{rel}/NAD_{rel}_TXT.zip"
     archive_file = check_archive(archive_file)
     setup_fifo(archive_file, "TXT/NAD.txt", fifoname)
     # The parent PID will wait for the FIFO to have content
@@ -168,6 +168,7 @@ def load_db(dbc, rel, fifoname, chksz):
     loops = load(dbc, fifoname, rel=rel.upper(), chk_size=chksz)
     logger.info(f"Loaded in {((time.time() - stime)/60.0):-0.5g} minutes, {loops} loops of {chksz}")
 
+    nad_storage.parquet_stats(dbc.pattern)
 
 def main(args):
     if "--release" in args:
@@ -187,17 +188,17 @@ def main(args):
         if dbfile.split('.')[-1] not in ('db','sqlite','sqlite3'):
             dbfile += ".db"
     else:
-        dbfile = os.path.expanduser(f"tmp/nad_{rel}_q.db")
+        dbfile = os.path.expanduser(f"tmp/nad_{rel}.db")
 
     if "--report" in args:
         dx = "--detailed" in args
         report_db(dbfile, rel, detailed=dx)
         sys.exit()
 
-    chksz = 150000
+    chksz = 100000
 
     #dbc = nad_storage.Sqlite_NAD_Writer(dbfile, chunksize=chksz)
-    dbc = nad_storage.Parquet_NAD_Writer(f"tmp/nad_{rel}_q/nad_{rel}", chunksize=chksz, compression="ZSTD")
+    dbc = nad_storage.Parquet_NAD_Writer(f"tmp/nad_{rel}/nad_{rel}", chunksize=chksz, compression="ZSTD")
 
     load_db(dbc, rel, fifoname, chksz)
 
