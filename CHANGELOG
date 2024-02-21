@@ -1,0 +1,2 @@
+v0.5.0 - 2024-02-21
+  * Provide classes for Sqlite and Parquet writers
