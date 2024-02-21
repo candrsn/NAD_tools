@@ -168,7 +168,9 @@ def load_db(dbc, rel, fifoname, chksz):
     loops = load(dbc, fifoname, rel=rel.upper(), chk_size=chksz)
     logger.info(f"Loaded in {((time.time() - stime)/60.0):-0.5g} minutes, {loops} loops of {chksz}")
 
+    dbc.close_writer()
     nad_storage.parquet_stats(dbc.pattern)
+
 
 def main(args):
     if "--release" in args:
@@ -185,20 +187,33 @@ def main(args):
 
     if "--db" in args:
         dbfile = os.path.expanduser(args[args.index("--db")+1])
-        if dbfile.split('.')[-1] not in ('db','sqlite','sqlite3'):
-            dbfile += ".db"
     else:
         dbfile = os.path.expanduser(f"tmp/nad_{rel}.db")
+
+    # due to variable reuse, this needs to be after the --db testing
+    if "--pq" in args:
+        parquet_format = True
+        sqlite_format = False
+    else:
+        sqlite_format = True
+        parquet_format = False
+        if dbfile.split('.')[-1] not in ('db','sqlite','sqlite3') and parquet_format is False:
+            dbfile += ".db"
 
     if "--report" in args:
         dx = "--detailed" in args
         report_db(dbfile, rel, detailed=dx)
         sys.exit()
 
+    # for sqlite, this is the number of tuples in a bulk insert
+    # for parquet, this is the number of rows in a row_group inside a parquet file 
     chksz = 100000
 
-    #dbc = nad_storage.Sqlite_NAD_Writer(dbfile, chunksize=chksz)
-    dbc = nad_storage.Parquet_NAD_Writer(f"tmp/nad_{rel}/nad_{rel}", chunksize=chksz, compression="ZSTD")
+    if sqlite_format is True:
+        dbc = nad_storage.Sqlite_NAD_Writer(dbfile, chunksize=chksz)
+    else:
+        dbc = nad_storage.Parquet_NAD_Writer(dbfile, chunksize=chksz, 
+                compression="ZSTD", compression_level=9, row_group_size=50)
 
     load_db(dbc, rel, fifoname, chksz)
 

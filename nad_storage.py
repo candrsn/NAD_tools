@@ -57,14 +57,17 @@ class Parquet_NAD_Writer():
     files = []
     writer = None
     schema = None
-    file_rowsets = 150
+    file_rowgroups = 100
     rowset_itr = 0
 
-    def __init__(self, pathpattern, chunksize=None, compression="ZSTD"):
+    def __init__(self, pathpattern, chunksize=None, compression="ZSTD", 
+                compression_level=9, row_group_size=100):
         self.pattern = pathpattern
         self.active_file = self.compute_next_filename()
         self.chunksize = chunksize
         self.compression = compression
+        self.compression_level = compression_level
+        self.file_rowgroups = row_group_size
         fparts = pathpattern.split('/')
         if len(fparts) > 1:
             os.makedirs('/'.join(fparts[:-1]), exist_ok=True)
@@ -81,6 +84,11 @@ class Parquet_NAD_Writer():
         
         return fx
 
+    def close_writer(self):
+        if self.writer is not None:
+            self.writer.close()
+        os.sync()
+
     def connect(self):
         pass
 
@@ -92,10 +100,10 @@ class Parquet_NAD_Writer():
         fx = pyarrow.Table.from_pandas(df, schema=self.schema, safe=False)
         if self.writer is None:
             self.writer = pyarrow.parquet.ParquetWriter(self.active_file, fx.schema, 
-                            compression=self.compression, compression_level=19)
+                            compression=self.compression, compression_level=self.compression_level)
         self.writer.write_table(fx)
 
-        if self.rowset_itr > self.file_rowsets:
+        if self.rowset_itr > self.file_rowgroups:
             self.rowset_itr = 0
             self.compute_next_filename()
         else:
@@ -105,7 +113,7 @@ class Parquet_NAD_Writer():
         if "_metadata" in glob.glob(self.pattern + "/*"):
             fileset = pyarrow.parquet.ParquetDataset(self.pattern)
         else:
-            fg = glob.glob(self.pattern)
+            fg = glob.glob(self.pattern + "/*.parquet")
             fileset = pyarrow.parquet.ParquetDataset(fg)
 
             schema = fileset.schema
@@ -113,9 +121,8 @@ class Parquet_NAD_Writer():
             mc = []
             pyarrow.parquet.write_metadata(schema, self.pattern + "/_metadata", metadata_collector=mc)
 
-
     def commit(self):
-        pass
+        os.sync()
 
     def close(self):
         if self.writer is not None:
@@ -126,6 +133,10 @@ class Parquet_NAD_Writer():
 
 
 def parquet_stats(path):
+    os.sync()
+
+    if not os.path.isdir(path):
+        path = os.path.dirname(path)
 
     fg = glob.glob(path + "/*.parquet")
 
@@ -159,5 +170,5 @@ def parquet_stats(path):
 
 if __name__ == "__main__":
 
-    parquet_stats("tmp/nad_r15")
+    parquet_stats("tmp/nad_r5")
 
